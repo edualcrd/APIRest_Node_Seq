@@ -1,12 +1,14 @@
 import express from "express";
 import productoRoutes from "./routes/productosRoutes.js";
 import { sequelize } from "./config/db.js";
+import logRoutes from "./routes/logsRoutes.js";
 
 const app = express();
 app.use(express.json());
 
 // Rutas
 app.use("/productos", productoRoutes);
+app.use("/logs", logRoutes);
 
 // Sincronizar base de datos
 (async () => {

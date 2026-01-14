@@ -1,6 +1,7 @@
 {
   "name": "apirest_node_seq",
   "version": "1.0.0",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -11,6 +12,7 @@
   "description": "",
   "dependencies": {
     "express": "^5.2.1",
+    "mysql2": "^3.16.0",
     "sequelize": "^6.37.7"
   }
 }
