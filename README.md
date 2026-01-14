@@ -39,7 +39,7 @@ En este proyecto **no es necesario realizar migraciones manuales**.
 ## 4. Como lanzar el servidor
 
 ```bash
-node autocrud.js
+node server.js
 
 
 ---
