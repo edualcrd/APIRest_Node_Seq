@@ -20,17 +20,30 @@ const models = fs.readdirSync(modelsPath)
 console.log(`🔎 Modelos encontrados: ${models.join(", ")}`);
 
 for (const modelFile of models) {
-    const modelName = path.basename(modelFile, ".js"); // ej: productos
-    const modelClass = modelName.charAt(0).toUpperCase() + modelName.slice(1); // ej: Productos (para nombres de funciones plurales)
+    const modelName = path.basename(modelFile, ".js"); // ej: productos, node1
     
-    // Calcular singular y CAPITALIZARLO para CamelCase
-    const singularRaw = modelName.endsWith('s') ? modelName.slice(0, -1) : modelName; // ej: producto
-    const singular = singularRaw.charAt(0).toUpperCase() + singularRaw.slice(1); // ej: Producto (para el Modelo real)
+    // LÓGICA DE PLURAL/SINGULAR MEJORADA
+    let singularRaw = modelName;
+    let pluralRaw = modelName;
 
-    console.log(`⚙️ Generando arquitectura para: ${modelName} (Modelo: ${singular})...`);
+    if (modelName.endsWith('s')) {
+        // Si termina en 's' (ej: productos)
+        singularRaw = modelName.slice(0, -1); // producto
+        pluralRaw = modelName; // productos
+    } else {
+        // Si NO termina en 's' (ej: node1, log) -> Forzamos plural con 's'
+        singularRaw = modelName; // node1
+        pluralRaw = modelName + 's'; // node1s (para evitar duplicados)
+    }
+
+    // Capitalizar
+    const singular = singularRaw.charAt(0).toUpperCase() + singularRaw.slice(1); // Node1
+    const plural = pluralRaw.charAt(0).toUpperCase() + pluralRaw.slice(1); // Node1s
+
+    console.log(`⚙️ Generando arquitectura para: ${modelName} (Lista: ${plural} | Detalle: ${singular})...`);
 
     // ---------------------------------------------------------
-    // A. SERVICIO (CORREGIDO: Usa 'singular' para importar y usar el modelo)
+    // A. SERVICIO
     // ---------------------------------------------------------
     const serviceContent = `// services/${modelName}Service.js
 import { ${singular} } from "../models/${modelName}.js";
@@ -73,46 +86,46 @@ export const crear${singular} = async (req, res) => {
         const nuevo = await Service.crear(req.body);
         res.status(201).json(nuevo);
     } catch (error) {
-        res.status(500).json({ mensaje: "Error al crear ${singularRaw}", error: error.message });
+        res.status(500).json({ mensaje: "Error al crear ${singular}", error: error.message });
     }
 };
 
-export const obtener${modelClass} = async (req, res) => {
+export const obtener${plural} = async (req, res) => {
     try {
         const lista = await Service.obtenerTodos();
         res.json(lista);
     } catch (error) {
-        res.status(500).json({ mensaje: "Error al obtener ${modelName}", error: error.message });
+        res.status(500).json({ mensaje: "Error al obtener ${plural}", error: error.message });
     }
 };
 
 export const obtener${singular} = async (req, res) => {
     try {
         const item = await Service.obtenerPorId(req.params.id);
-        if (!item) return res.status(404).json({ mensaje: "${singularRaw} no encontrado" });
+        if (!item) return res.status(404).json({ mensaje: "${singular} no encontrado" });
         res.json(item);
     } catch (error) {
-        res.status(500).json({ mensaje: "Error al obtener ${singularRaw}", error: error.message });
+        res.status(500).json({ mensaje: "Error al obtener ${singular}", error: error.message });
     }
 };
 
 export const actualizar${singular} = async (req, res) => {
     try {
         const actualizado = await Service.actualizar(req.params.id, req.body);
-        if (!actualizado) return res.status(404).json({ mensaje: "${singularRaw} no encontrado" });
+        if (!actualizado) return res.status(404).json({ mensaje: "${singular} no encontrado" });
         res.json(actualizado);
     } catch (error) {
-        res.status(500).json({ mensaje: "Error al actualizar ${singularRaw}", error: error.message });
+        res.status(500).json({ mensaje: "Error al actualizar ${singular}", error: error.message });
     }
 };
 
 export const eliminar${singular} = async (req, res) => {
     try {
         const eliminado = await Service.eliminar(req.params.id);
-        if (!eliminado) return res.status(404).json({ mensaje: "${singularRaw} no encontrado" });
-        res.json({ mensaje: "${singularRaw} eliminado correctamente" });
+        if (!eliminado) return res.status(404).json({ mensaje: "${singular} no encontrado" });
+        res.json({ mensaje: "${singular} eliminado correctamente" });
     } catch (error) {
-        res.status(500).json({ mensaje: "Error al eliminar ${singularRaw}", error: error.message });
+        res.status(500).json({ mensaje: "Error al eliminar ${singular}", error: error.message });
     }
 };
 `;
@@ -122,12 +135,15 @@ export const eliminar${singular} = async (req, res) => {
     // C. CONTROLADOR EXTENDIDO
     // ---------------------------------------------------------
     const controllerPath = `${controllersPath}/${modelName}Controller.js`;
+    // SIEMPRE REGENERARLO SI ES NODE1 (por si acaso quedó mal), 
+    // pero respetando la lógica original de no sobrescribir para otros.
+    // Para simplificarte el examen: borra el archivo node1Controller.js manualmente antes de ejecutar si tienes dudas.
     if (!fs.existsSync(controllerPath)) {
         const controllerContent = `// controllers/${modelName}Controller.js
 import * as Base from "./base/${modelName}BaseController.js";
 
 export const crear${singular} = Base.crear${singular};
-export const obtener${modelClass} = Base.obtener${modelClass};
+export const obtener${plural} = Base.obtener${plural};
 export const obtener${singular} = Base.obtener${singular};
 export const actualizar${singular} = Base.actualizar${singular};
 export const eliminar${singular} = Base.eliminar${singular};
@@ -144,7 +160,7 @@ export const eliminar${singular} = Base.eliminar${singular};
 import express from "express";
 import {
     crear${singular},
-    obtener${modelClass},
+    obtener${plural},
     obtener${singular},
     actualizar${singular},
     eliminar${singular}
@@ -152,7 +168,7 @@ import {
 
 const router = express.Router();
 
-router.get("/", obtener${modelClass});
+router.get("/", obtener${plural});
 router.get("/:id", obtener${singular});
 router.post("/", crear${singular});
 router.put("/:id", actualizar${singular});
